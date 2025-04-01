@@ -147,7 +147,7 @@ def run_pasc(event):
 
 # Visualize the structure.
 structure = AmoebotStructure()
-structure.create_hexagonal_grid(grid_width=5, grid_height=5)
+structure.create_hexagonal_grid(grid_width=10, grid_height=10)
 fig, ax = structure.draw_structure()
 # Add a button to run the PASC algorithm.
 button_ax = plt.axes([0.80, 0.05, 0.15, 0.075])  # Adjust position as needed.
