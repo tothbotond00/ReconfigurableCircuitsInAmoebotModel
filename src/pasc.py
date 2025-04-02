@@ -1,3 +1,4 @@
+import sys
 import math 
 import networkx as nx 
 import matplotlib.pyplot as plt 
@@ -53,6 +54,26 @@ class AmoebotStructure:
                         if not self.graph.has_edge(node, other_node):
                             self.add_connection(node, other_node)
                         break
+    def load_from_file(self, filename, hex_size=1):
+        self.graph.clear()
+        try:
+            with open(filename, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    parts = line.split(',')
+                    if len(parts) < 3:
+                        continue  # skip invalid lines
+                    node_id = int(parts[0].strip())
+                    q = int(parts[1].strip())
+                    r = int(parts[2].strip())
+                    pos = self.axial_to_pixel(q, r, hex_size)
+                    self.add_amoebot(node_id, pos, (q, r))
+            self._add_edges_from_axial()
+            print(f"Loaded model from {filename}")
+        except Exception as e:
+            print(f"Error loading file {filename}: {e}")
 
     def draw_structure(self, hex_size=1, draw_edges=True, ax=None):
         if ax is None:
@@ -147,7 +168,12 @@ def run_pasc(event):
 
 # Visualize the structure.
 structure = AmoebotStructure()
-structure.create_hexagonal_grid(grid_width=10, grid_height=10)
+if len(sys.argv) > 1:
+    filename = sys.argv[1]
+    structure.load_from_file(filename, hex_size=1)
+else:
+    # No file provided; use a default 5x5 grid.
+    structure.create_hexagonal_grid(grid_width=5, grid_height=5, hex_size=1)
 fig, ax = structure.draw_structure()
 # Add a button to run the PASC algorithm.
 button_ax = plt.axes([0.80, 0.05, 0.15, 0.075])  # Adjust position as needed.

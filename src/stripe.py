@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+import sys
 import math
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -109,6 +109,27 @@ class AmoebotStructure:
         ax.set_title("Amoebot Hexagonal Grid")
         fig.canvas.draw()
         return fig, ax
+    
+    def load_from_file(self, filename, hex_size=1):
+        self.graph.clear()
+        try:
+            with open(filename, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    parts = line.split(',')
+                    if len(parts) < 3:
+                        continue  # skip invalid lines
+                    node_id = int(parts[0].strip())
+                    q = int(parts[1].strip())
+                    r = int(parts[2].strip())
+                    pos = self.axial_to_pixel(q, r, hex_size)
+                    self.add_amoebot(node_id, pos, (q, r))
+            self._add_edges_from_axial()
+            print(f"Loaded model from {filename}")
+        except Exception as e:
+            print(f"Error loading file {filename}: {e}")
 
     def run_all_stripes(self, ax, direction='E', delay=0.8):
         # Precompute each node's directional coordinate for quick lookup
@@ -151,8 +172,14 @@ def run_stripes_button_callback(event):
 
 if __name__ == '__main__':
     structure = AmoebotStructure()
-    # For example, a 5x5 hex grid:
-    structure.create_hexagonal_grid(grid_width=5, grid_height=5, hex_size=1)
+    
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+        structure.load_from_file(filename, hex_size=1)
+    else:
+        # No file provided; use a default 5x5 grid.
+        structure.create_hexagonal_grid(grid_width=5, grid_height=5, hex_size=1)
+    
     fig, ax = structure.draw_structure(hex_size=1)
 
     # A TextBox for direction input:
