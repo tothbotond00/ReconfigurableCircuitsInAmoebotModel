@@ -190,7 +190,7 @@ class AmoebotStructure:
 
 def run_stripes_button_callback(event):
     direction = text_box_direction.text.upper().strip()  # read from the text box
-    if direction not in ['N', 'S', 'W', 'E' 'NE', 'NW', 'SE', 'SW']:
+    if direction not in ['N', 'S', 'W', 'E', 'NE', 'NW', 'SE', 'SW']:
         print("Invalid direction. Using 'E' by default.")
         direction = 'E'
     index = int(text_box_index.text.strip())  # read from the text box
