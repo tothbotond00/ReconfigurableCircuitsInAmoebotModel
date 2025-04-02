@@ -14,15 +14,15 @@ import time
 #   NW or SE: nodes share the same 'q + r' value
 # (You can adapt if your coordinate system differs.)
 def directional_coord(q, r, direction):
-    if direction == 'E' or direction == 'W':
+
+    if direction == 'NE' or direction == 'SW':
         return r
-    elif direction == 'NE' or direction == 'SW':
-        return q
     elif direction == 'NW' or direction == 'SE':
-        return q + r
-    else:
-        # Default/fallback, treat as E
-        return r
+        return r + q
+    elif direction == 'N' or direction == 'S':
+        return q
+    elif direction == 'W' or direction == 'E':
+        return q + 2*r
 
 class AmoebotStructure:
     def __init__(self):
@@ -131,44 +131,76 @@ class AmoebotStructure:
         except Exception as e:
             print(f"Error loading file {filename}: {e}")
 
-    def run_all_stripes(self, ax, direction='E', delay=0.8):
-        # Precompute each node's directional coordinate for quick lookup
-        dir_coords = {}
+    def run_all_stripes(self, ax, direction, index, delay=0.8):
+
+        # disable the button while running
+        button_stripe.set_active(False)
+        button_reset.set_active(False)
+        button_stripe.label.set_text("Running...")
+
+
+        ref_node = self.graph.nodes()[index]
+        print(f"Reference node: {ref_node}")
+        q_start, r_start = ref_node['axial']
+
+        stripe_nodes = []
         for node, data in self.graph.nodes(data=True):
             q, r = data['axial']
-            dir_coords[node] = directional_coord(q, r, direction)
+            if directional_coord(q, r, direction) == directional_coord(q_start, r_start, direction):
+                stripe_nodes.append(node)
 
-        # We'll iterate over each node as the "reference."
-        # In each iteration, we color the axis that goes through that reference in lime.
-        node_list = sorted(self.graph.nodes())
-        for ref in node_list:
-            # 1) Mark the axis
-            ref_val = dir_coords[ref]
-            for node in node_list:
-                if dir_coords[node] == ref_val:
-                    self.patches[node].set_facecolor('lime')
-                    self.texts[node].set_text("1")
-                else:
-                    self.patches[node].set_facecolor('lightblue')
-                    self.texts[node].set_text("0")
+        print(f"Stripe nodes: {stripe_nodes}")
+
+        # Index of the reference node in the stripe_nodes list
+        ref_index = stripe_nodes.index(index)
+
+        # Color the ref node in red
+        self.patches[index].set_facecolor('red')
+        ax.figure.canvas.draw()
+        plt.pause(delay)
+        time.sleep(delay)
+
+        for node in stripe_nodes[ref_index + 1:]:
+            self.patches[node].set_facecolor('lime')
             ax.figure.canvas.draw()
             plt.pause(delay)
+            time.sleep(delay)
 
-        # Optionally, revert to original coloring at the end
-        for node in node_list:
-            self.patches[node].set_facecolor('lightblue')
-            self.texts[node].set_text(str(node))
-        ax.figure.canvas.draw()
-        print("All stripes displayed for direction:", direction)
+        for node in reversed(stripe_nodes[:ref_index]):
+            self.patches[node].set_facecolor('lime')
+            ax.figure.canvas.draw()
+            plt.pause(delay)
+            time.sleep(delay)
+
+        # # Reset all nodes to their original color
+        # for node in stripe_nodes:
+        #     self.patches[node].set_facecolor('lightblue')
+        #     ax.figure.canvas.draw()
+        #     plt.pause(delay)
+        #     time.sleep(delay)
+
+        # Exit the function
+        button_stripe.label.set_text("Run Stripe")
+        button_stripe.set_active(True)
+        button_reset.set_active(True)
+        return
+
 
 # ----------- GUI / Main Code -----------
 
 def run_stripes_button_callback(event):
-    direction = text_box.text.upper().strip()  # read from the text box
-    if direction not in ['E', 'W', 'NE', 'NW', 'SE', 'SW']:
+    direction = text_box_direction.text.upper().strip()  # read from the text box
+    if direction not in ['N', 'S', 'W', 'E' 'NE', 'NW', 'SE', 'SW']:
         print("Invalid direction. Using 'E' by default.")
         direction = 'E'
-    structure.run_all_stripes(ax, direction=direction, delay=0.8)
+    index = int(text_box_index.text.strip())  # read from the text box
+    print(index)
+    structure.run_all_stripes(ax, direction=direction, index=index, delay=0.4)
+
+def reset_colors_callback(event):
+    for node in structure.graph.nodes():
+        structure.patches[node].set_facecolor('lightblue')
+    ax.figure.canvas.draw()
 
 if __name__ == '__main__':
     structure = AmoebotStructure()
@@ -183,12 +215,21 @@ if __name__ == '__main__':
     fig, ax = structure.draw_structure(hex_size=1)
 
     # A TextBox for direction input:
-    text_ax = plt.axes([0.75, 0.9, 0.2, 0.05])
-    text_box = TextBox(text_ax, "Direction", initial="E")
+    text_ax_direction = plt.axes([0.75, 0.9, 0.2, 0.05])
+    text_box_direction = TextBox(text_ax_direction, "Direction", initial="NE")
+
+    # A TeextBox for index input:
+    text_ax_index = plt.axes([0.75, 0.84, 0.2, 0.05])
+    text_box_index = TextBox(text_ax_index, "Index", initial="0")
 
     # A button to run the stripes on every node:
-    button_ax = plt.axes([0.75, 0.8, 0.2, 0.06])
+    button_ax = plt.axes([0.85, 0.75, 0.1, 0.06])
     button_stripe = Button(button_ax, "Run Stripe")
     button_stripe.on_clicked(run_stripes_button_callback)
+
+    # A button to reset the colors:
+    button_reset_ax = plt.axes([0.85, 0.68, 0.1, 0.06])
+    button_reset = Button(button_reset_ax, "Reset Colors")
+    button_reset.on_clicked(reset_colors_callback)
 
     plt.show()
