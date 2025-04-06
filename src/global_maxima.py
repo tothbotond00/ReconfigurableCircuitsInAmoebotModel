@@ -10,15 +10,6 @@ import time
 # --- Helper functions ---
 
 def stripe_id(axial, direction):
-    """
-    Groups nodes into stripes based on their axial coordinate.
-    For our demo:
-      • For 'N' or 'S': group by constant q.
-      • For 'NE' or 'SW': group by constant r.
-      • For 'NW' or 'SE': group by constant (q + r).
-      • For 'E' or 'W': group by the horizontal (pixel) coordinate.
-          We approximate this by round(r + q/2).
-    """
     q, r = axial
     if direction in ['N', 'S']:
         return q
@@ -32,18 +23,6 @@ def stripe_id(axial, direction):
         return q  # default
 
 def candidate_value(pos, direction):
-    """
-    Returns a scalar value for a node at pixel position pos=(x,y) in the given direction.
-    For our demo, we use:
-      • 'N': higher y means more north.
-      • 'S': lower y means more south.
-      • 'E': larger x means more east.
-      • 'W': lower x means more west.
-      • 'NE': use (x+y).
-      • 'SW': use (-(x+y)).
-      • 'NW': use (-x+y).
-      • 'SE': use (x-y).
-    """
     x, y = pos
     if direction == 'N':
         return y
@@ -83,11 +62,6 @@ class AmoebotStructure:
 
     @staticmethod
     def axial_to_pixel(q, r, hex_size):
-        """
-        Converts axial coordinates (q, r) to 2D pixel coordinates for flat‐topped hexagons.
-        x = hex_size * (3/2 * q)
-        y = hex_size * (sqrt(3) * (r + q/2))
-        """
         x = hex_size * (3/2 * q)
         y = hex_size * (math.sqrt(3) * (r + q/2))
         return (x, y)
@@ -185,14 +159,6 @@ class AmoebotStructure:
         return fig, ax
 
     def run_global_maxima(self, ax, direction, delay=0.5):
-        """
-        Demonstrates the global maximum procedure.
-        1. Group nodes into stripes according to the chosen direction using stripe_id.
-        2. In each stripe, pick the candidate node with the maximum candidate_value.
-        3. Run a tournament (elimination rounds like PASC) on the candidate list:
-             In each round, pair candidates, highlight them, then keep the one with the higher value.
-        4. The final remaining candidate is the global maximum, which is highlighted in magenta.
-        """
         # Step 1: Group nodes into stripes.
         groups = {}
         for node, data in self.graph.nodes(data=True):
