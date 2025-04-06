@@ -38,7 +38,7 @@ def main():
             char = lines[row][col]
             if char == '1':
                 # compute q, r in even-q vertical layout
-                q = -col
+                q = col
                 r = row - (col // 2)
                 nodes.append((node_id, q, r))
                 node_id += 1
