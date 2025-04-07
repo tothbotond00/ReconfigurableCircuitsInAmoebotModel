@@ -45,6 +45,8 @@ def candidate_value(pos, direction):
 
 # --- Main Class ---
 
+pause = False
+
 class AmoebotStructure:
     def __init__(self):
         # The graph holds each amoebot node and its attributes.
@@ -52,6 +54,7 @@ class AmoebotStructure:
         # Dictionaries for the matplotlib patch objects and text labels.
         self.patches = {}
         self.texts = {}
+        self.pause = False
 
     def add_amoebot(self, amoebot_id, pos, axial):
         # Each node stores its pixel position, its axial coordinate.
@@ -102,22 +105,9 @@ class AmoebotStructure:
                     r = int(parts[2].strip())
                     pos = self.axial_to_pixel(q, r, hex_size)
                     self.add_amoebot(node_id, pos, (q, r))
-            self._add_edges_from_axial()
             print(f"Loaded model from {filename}")
         except Exception as e:
             print(f"Error loading file {filename}: {e}")
-
-    def _add_edges_from_axial(self):
-        axial_coords = {n: data['axial'] for n, data in self.graph.nodes(data=True)}
-        neighbor_dirs = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1)]
-        for node, (q, r) in axial_coords.items():
-            for dq, dr in neighbor_dirs:
-                qq, rr = q + dq, r + dr
-                for other, (oq, or_) in axial_coords.items():
-                    if oq == qq and or_ == rr:
-                        if not self.graph.has_edge(node, other):
-                            self.add_connection(node, other)
-                        break
 
     def draw_structure(self, hex_size=1, draw_edges=True, ax=None):
         if ax is None:
@@ -133,8 +123,9 @@ class AmoebotStructure:
         for node, data in self.graph.nodes(data=True):
             x, y = data['pos']
             radius = 1
+            color = 'yellow'
             poly = RegularPolygon((x, y), numVertices=6, radius=radius,
-                                  orientation=orientation, facecolor='lightblue', edgecolor='k')
+                                  orientation=orientation, facecolor=color, edgecolor='k')
             ax.add_patch(poly)
             self.patches[node] = poly
             # Label nodes initially with their ID.
@@ -158,74 +149,204 @@ class AmoebotStructure:
         fig.canvas.draw()
         return fig, ax
 
-    def run_global_maxima(self, ax, direction, delay=0.5):
+    def run_global_maxima(self, ax, direction, delay, index):
+
+        button_pasc.set_active(False)
+        button_reset.set_active(False)
+        button_pasc.label.set_text("Running...")
         # Step 1: Group nodes into stripes.
         groups = {}
+        alternate_direction = ''
+        if(direction == 'N' or direction == 'S'): alternate_direction = 'E'
+        elif(direction == 'E' or direction == 'W'): alternate_direction = 'N'
+        elif(direction == 'NE' or direction == 'SW'): alternate_direction = 'NW'
+        elif(direction == 'NW' or direction == 'SE'): alternate_direction = 'NE'
+        sid_count = 0
+        unique_sids = []
         for node, data in self.graph.nodes(data=True):
-            sid = stripe_id(data['axial'], direction)
-            groups.setdefault(sid, []).append(node)
-        print("Stripe groups (by stripe ID):")
-        for sid in sorted(groups.keys()):
-            print(f"Stripe {sid}: {groups[sid]}")
+            sid = stripe_id(data['axial'], alternate_direction)
+            if sid not in unique_sids:
+                unique_sids.append(sid)
+        sid_count = len(unique_sids)
+        if(direction in ('S', 'W', 'SW', 'SE')):
+            for node, data in self.graph.nodes(data=True):
+                sid = stripe_id(data['axial'], alternate_direction)
+                sid = sid_count - sid - 1
+                groups.setdefault(sid, []).append({'node': node, 'primary': False, 'secondary': False, 'active': True, 'bits': ""})
+        else:
+            for node, data in self.graph.nodes(data=True):
+                sid = stripe_id(data['axial'], alternate_direction)
+                groups.setdefault(sid, []).append({'node': node, 'primary': False, 'secondary': False, 'active': True, 'bits': ""})
 
-        # Step 2: For each stripe, choose the local maximum candidate.
-        candidates = []
-        for sid, nodes in groups.items():
-            best = max(nodes, key=lambda n: candidate_value(self.graph.nodes[n]['pos'], direction))
-            candidates.append(best)
-        print("Local candidates from each stripe:", candidates)
 
-        # Step 3: Tournament elimination rounds.
-        round_num = 1
-        current_candidates = candidates[:]
-        while len(current_candidates) > 1:
-            new_candidates = []
-            print(f"Round {round_num}: Candidates = {current_candidates}")
-            i = 0
-            while i < len(current_candidates):
-                if i == len(current_candidates) - 1:
-                    new_candidates.append(current_candidates[i])
-                    self.patches[current_candidates[i]].set_facecolor('cyan')
-                    ax.figure.canvas.draw()
-                    plt.pause(delay)
-                    i += 1
-                else:
-                    c1 = current_candidates[i]
-                    c2 = current_candidates[i+1]
-                    self.patches[c1].set_facecolor('orange')
-                    self.patches[c2].set_facecolor('orange')
-                    ax.figure.canvas.draw()
-                    plt.pause(delay)
-                    val1 = candidate_value(self.graph.nodes[c1]['pos'], direction)
-                    val2 = candidate_value(self.graph.nodes[c2]['pos'], direction)
-                    if val1 >= val2:
-                        winner = c1
-                        loser = c2
-                    else:
-                        winner = c2
-                        loser = c1
-                    self.patches[loser].set_facecolor('grey')
-                    self.patches[winner].set_facecolor('red')
-                    ax.figure.canvas.draw()
-                    plt.pause(delay)
-                    new_candidates.append(winner)
-                    i += 2
-            current_candidates = new_candidates
-            round_num += 1
+        self.send_beep(index, ax, delay, groups)
 
-        # Step 4: Highlight global maximum.
-        global_max = current_candidates[0]
-        print("Global maximum candidate:", global_max, "with value", candidate_value(self.graph.nodes[global_max]['pos'], direction))
-        self.patches[global_max].set_facecolor('magenta')
-        self.texts[global_max].set_text(f"Max\n{candidate_value(self.graph.nodes[global_max]['pos'], direction):.2f}")
+    def send_beep(self, ref_node_index, ax, delay, groups):
+
+        find_key = [k for k, v in groups.items() if any(item['node'] == ref_node_index for item in v)]
+        for item in groups.get(find_key[0], []): item['primary'] = True
+
+        active_sum = 0
+        for i in range(0, len(groups)):
+            if(groups[i][0]['active'] == True):
+                active_sum += 1
+
+        #Color the ref node in red
+        self.patches[ref_node_index].set_facecolor('red')
         ax.figure.canvas.draw()
         plt.pause(delay)
+        time.sleep(delay)
 
-    def reset_colors(self, ax):
-        for node in self.graph.nodes():
-            self.patches[node].set_facecolor('lightblue')
-            self.texts[node].set_text(str(node))
-        ax.figure.canvas.draw()
+        while active_sum != 1:
+        
+            #Beep from ref_node to right
+            for i in range(find_key[0] + 1, len(groups)):
+                if(i != 0):
+                    if(groups[i-1][0]['primary'] == True and groups[i][0]['active'] == True):
+                        for item in groups.get(i, []): item['primary'] = False
+                        for item in groups.get(i, []): item['secondary'] = True
+                    elif(groups[i-1][0]['primary'] == True and groups[i][0]['active'] == False):
+                        for item in groups.get(i, []): item['primary'] = True
+                        for item in groups.get(i, []): item['secondary'] = False
+                    elif(groups[i-1][0]['secondary'] == True and groups[i][0]['active'] == True):
+                        for item in groups.get(i, []): item['primary'] = True
+                        for item in groups.get(i, []): item['secondary'] = False
+                    elif(groups[i-1][0]['secondary'] == True and groups[i][0]['active'] == False):
+                        for item in groups.get(i, []): item['primary'] = False
+                        for item in groups.get(i, []): item['secondary'] = True
+
+
+                    #Blink color
+                    original_color = self.patches[groups.get(i, [])[0]['node']].get_facecolor()
+                    if(groups[i][0]['primary'] == True):
+                        node_ids = [item['node'] for item in groups.get(i, [])]
+                        for item in node_ids:
+                            self.patches[item].set_facecolor('orange')
+                    else:
+                        node_ids = [item['node'] for item in groups.get(i, [])]
+                        for item in node_ids:
+                            self.patches[item].set_facecolor('lime')
+                    ax.figure.canvas.draw()
+                    plt.pause(delay)
+                    time.sleep(delay)
+                    if pause:
+                        while pause:
+                            plt.pause(0.1)
+
+                    node_ids = [item['node'] for item in groups.get(i, [])]
+                    for item in node_ids:
+                        self.patches[item].set_facecolor(original_color)
+                    ax.figure.canvas.draw()
+                    plt.pause(delay)
+                    time.sleep(delay)
+                    if pause:
+                        while pause:
+                            plt.pause(0.1)
+
+
+
+            #Beep from ref_node to left
+            for i in range(find_key[0] - 1, -1, -1):
+                if(groups[i+1][0]['primary'] == True and groups[i+1][0]['active'] == True):
+                    for item in groups.get(i, []): item['primary'] = False
+                    for item in groups.get(i, []): item['secondary'] = True
+                elif(groups[i+1][0]['primary'] == True and groups[i+1][0]['active'] == False):
+                    for item in groups.get(i, []): item['primary'] = True
+                    for item in groups.get(i, []): item['secondary'] = False
+                elif(groups[i+1][0]['secondary'] == True and groups[i+1][0]['active'] == True):
+                    for item in groups.get(i, []): item['primary'] = True
+                    for item in groups.get(i, []): item['secondary'] = False
+                elif(groups[i+1][0]['secondary'] == True and groups[i+1][0]['active'] == False):
+                    for item in groups.get(i, []): item['primary'] = False
+                    for item in groups.get(i, []): item['secondary'] = True
+
+                
+                #Blink color
+                original_color = self.patches[groups.get(i, [])[0]['node']].get_facecolor()
+                if(groups[i][0]['primary'] == True):
+                    node_ids = [item['node'] for item in groups.get(i, [])]
+                    for item in node_ids:
+                        self.patches[item].set_facecolor('orange')
+                else:
+                    node_ids = [item['node'] for item in groups.get(i, [])]
+                    for item in node_ids:
+                        self.patches[item].set_facecolor('lime')
+                ax.figure.canvas.draw()
+                plt.pause(delay)
+                time.sleep(delay)
+                if pause:
+                    while pause:
+                        plt.pause(0.1)
+
+
+                node_ids = [item['node'] for item in groups.get(i, [])]
+                for item in node_ids:
+                    self.patches[item].set_facecolor(original_color)
+                ax.figure.canvas.draw()
+                plt.pause(delay)
+                time.sleep(delay)
+                if pause:
+                    while pause:
+                        plt.pause(0.1)
+
+        
+            # Add bits
+            for i in range(0, len(groups)):
+                if(groups[i][0]['primary'] == True):
+                    for item in groups.get(i, []): item['bits'] = "0" + item['bits']
+                elif(groups[i][0]['secondary'] == True):
+                    for item in groups.get(i, []): item['bits'] = "1" + item['bits']
+
+                if(groups[i][0]['active'] == True and groups[i][0]['secondary'] == True):
+                    for item in groups.get(i, []): item['active'] = False
+                for item in groups.get(i, []): item['primary'] = False
+                for item in groups.get(i, []): item['secondary'] = False
+
+            for item in groups.get(find_key[0], []): item['primary'] = True
+
+
+            
+
+
+            active_sum = 0
+            for i in range(0, len(groups)):
+                if(groups[i][0]['active'] == True):
+                    active_sum += 1
+                else:
+                    for item in groups.get(i, []):
+                        self.patches[item['node']].set_facecolor('grey')
+                    ax.figure.canvas.draw()
+                    plt.pause(delay)
+                    time.sleep(delay)
+                    if pause:
+                        while pause:
+                            plt.pause(0.1)
+
+
+
+            for i in range(0, len(groups)):
+                for item in groups.get(i, []):
+                    for node, data in self.graph.nodes(data=True):
+                        if(item['node'] == node):
+                            x, y = data['pos']
+                            if node in self.texts:
+                                self.texts[node].remove()
+                                del self.texts[node]
+                            t = ax.text(x, y, item['bits'], ha='center', va='center', fontsize=11, color='k')
+                            self.texts[node] = t
+                    ax.figure.canvas.draw()
+                    plt.pause(delay)
+                    time.sleep(delay)   
+                    if pause:
+                        while pause:
+                            plt.pause(0.1)
+       
+
+        button_reset.set_active(True)
+        button_pasc.set_active(True)
+        button_pasc.label.set_text("Run PASC")
+
+
 
 # --- GUI / Main Code ---
 
@@ -238,10 +359,23 @@ def run_global_max_button_callback(event):
         delay = float(text_box_delay.text.strip())
     except:
         delay = 0.5
-    structure.run_global_maxima(ax, direction=direction, delay=delay)
+    index = int(text_box_index.text.strip())
+    structure.run_global_maxima(ax, direction=direction, delay=delay, index=index)
 
 def reset_colors_callback(event):
-    structure.reset_colors(ax)
+    for node in structure.graph.nodes():
+        structure.patches[node].set_facecolor('yellow')
+        if node in structure.texts:
+            structure.texts[node].remove()
+            del structure.texts[node]
+
+    ax.figure.canvas.draw()
+
+def pause_callback(event):
+    global pause
+    pause = not pause  # Toggle the pause state
+    button_pause.label.set_text("Resume" if pause else "Pause")
+
 
 if __name__ == '__main__':
     structure = AmoebotStructure()
@@ -254,20 +388,42 @@ if __name__ == '__main__':
     fig, ax = structure.draw_structure(hex_size=1)
 
     # TextBox for entering direction.
-    text_ax_direction = plt.axes([0.75, 0.9, 0.2, 0.05])
+    text_ax_direction = plt.axes([0.85, 0.93, 0.1, 0.05])
     text_box_direction = TextBox(text_ax_direction, "Direction", initial="N")
-    # TextBox for delay (speed) setting.
-    text_ax_delay = plt.axes([0.75, 0.84, 0.2, 0.05])
+
+    # A TeextBox for index input:
+    text_ax_index = plt.axes([0.85, 0.86, 0.1, 0.05])
+    text_box_index = TextBox(text_ax_index, "Index", initial="5")
+
+    #Set delay
+    text_ax_delay = plt.axes([0.85, 0.79, 0.1, 0.05])
     text_box_delay = TextBox(text_ax_delay, "Speed", initial="0.5")
 
-    # Button to run the global maximum demonstration.
-    button_ax = plt.axes([0.85, 0.75, 0.1, 0.06])
-    button_global_max = Button(button_ax, "Global Max")
-    button_global_max.on_clicked(run_global_max_button_callback)
+    # A button to run the stripes on every node:
+    button_ax = plt.axes([0.85, 0.72, 0.1, 0.05])
+    button_pasc = Button(button_ax, "Run PASC")
+    button_pasc.on_clicked(run_global_max_button_callback)
 
-    # Button to reset colors.
-    button_reset_ax = plt.axes([0.85, 0.68, 0.1, 0.06])
-    button_reset = Button(button_reset_ax, "Reset Colors")
+    # A button to reset the colors:
+    button_reset_ax = plt.axes([0.85, 0.65, 0.1, 0.05])
+    button_reset = Button(button_reset_ax, "Reset")
     button_reset.on_clicked(reset_colors_callback)
+
+    #Pause
+    button_pause_ax = plt.axes([0.85, 0.2, 0.1, 0.06])
+    button_pause = Button(button_pause_ax, "Pause")
+    button_pause.on_clicked(pause_callback)
+
+    #Exit
+    button_exit_ax = plt.axes([0.85, 0.1, 0.1, 0.06])
+    button_exit = Button(button_exit_ax, "Exit")
+    button_exit.on_clicked(lambda event: plt.close())
+
+
+    legend_labels = ['Active', 'Inactive', 'Primary', 'Secondary']
+    legend_colors = ['yellow', 'grey', 'orange', 'lime']
+
+    ax.legend([plt.Line2D([0], [0], marker='o', color='w', label=label, markerfacecolor=color, markersize=10) for label, color in zip(legend_labels, legend_colors)], legend_labels, loc='upper left')
+
 
     plt.show()
