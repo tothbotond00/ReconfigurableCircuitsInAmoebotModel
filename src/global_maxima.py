@@ -167,7 +167,6 @@ class AmoebotStructure:
             sid = stripe_id(data['axial'], alternate_direction)
             if sid not in unique_sids:
                 unique_sids.append(sid)
-        print(unique_sids)
         sid_count = len(unique_sids)
         if(direction in ('S', 'W', 'SW', 'SE')):
             for node, data in self.graph.nodes(data=True):
@@ -179,7 +178,6 @@ class AmoebotStructure:
                 sid = stripe_id(data['axial'], alternate_direction)
                 groups.setdefault(sid, []).append({'node': node, 'primary': False, 'secondary': False, 'active': True, 'bits': ""})
 
-        print(groups)
         # 1. Rendezd a sid kulcsokat növekvő sorrendbe
         sorted_sids = sorted(groups.keys())
 
@@ -191,9 +189,6 @@ class AmoebotStructure:
 
         # 4. Opcionálisan felülírhatod az eredetit
         groups = new_groups
-
-        print(groups)
-
 
 
 
@@ -441,7 +436,7 @@ if __name__ == '__main__':
     legend_labels = ['Active', 'Inactive', 'Primary', 'Secondary']
     legend_colors = ['yellow', 'grey', 'orange', 'lime']
 
-    ax.legend([plt.Line2D([0], [0], marker='o', color='w', label=label, markerfacecolor=color, markersize=10) for label, color in zip(legend_labels, legend_colors)], legend_labels, loc='upper left')
+    ax.legend([plt.Line2D([0], [0], marker='o', color='w', label=label, markerfacecolor=color, markersize=10) for label, color in zip(legend_labels, legend_colors)], legend_labels, loc='lower left')
 
 
     plt.show()

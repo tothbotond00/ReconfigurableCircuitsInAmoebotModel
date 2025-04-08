@@ -126,7 +126,6 @@ class AmoebotStructure:
                     r = int(parts[2].strip())
                     pos = self.axial_to_pixel(q, r, hex_size)
                     self.add_amoebot(node_id, pos, (q, r))
-            self._add_edges_from_axial()
             print(f"Loaded model from {filename}")
         except Exception as e:
             print(f"Error loading file {filename}: {e}")
