@@ -291,7 +291,7 @@ class AmoebotStructure:
 
         
             # Add bits
-            for i in range(0, len(groups)):
+            for i in [*groups]:
                 if(groups[i][0]['primary'] == True):
                     for item in groups.get(i, []): item['bits'] = "0" + item['bits']
                 elif(groups[i][0]['secondary'] == True):
@@ -309,7 +309,7 @@ class AmoebotStructure:
 
 
             active_sum = 0
-            for i in range(0, len(groups)):
+            for i in [*groups]:
                 if(groups[i][0]['active'] == True):
                     active_sum += 1
                 else:
@@ -324,7 +324,7 @@ class AmoebotStructure:
 
 
 
-            for i in range(0, len(groups)):
+            for i in [*groups]:
                 for item in groups.get(i, []):
                     for node, data in self.graph.nodes(data=True):
                         if(item['node'] == node):
