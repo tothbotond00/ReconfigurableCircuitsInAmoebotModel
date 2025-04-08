@@ -167,6 +167,7 @@ class AmoebotStructure:
             sid = stripe_id(data['axial'], alternate_direction)
             if sid not in unique_sids:
                 unique_sids.append(sid)
+        print(unique_sids)
         sid_count = len(unique_sids)
         if(direction in ('S', 'W', 'SW', 'SE')):
             for node, data in self.graph.nodes(data=True):
@@ -177,6 +178,23 @@ class AmoebotStructure:
             for node, data in self.graph.nodes(data=True):
                 sid = stripe_id(data['axial'], alternate_direction)
                 groups.setdefault(sid, []).append({'node': node, 'primary': False, 'secondary': False, 'active': True, 'bits': ""})
+
+        print(groups)
+        # 1. Rendezd a sid kulcsokat növekvő sorrendbe
+        sorted_sids = sorted(groups.keys())
+
+        # 2. Készíts egy leképezést az eredeti sid értékekhez:
+        sid_mapping = {old_sid: new_sid for new_sid, old_sid in enumerate(sorted_sids)}
+
+        # 3. Hozd létre az új groups dictionary-t
+        new_groups = {sid_mapping[old_sid]: groups[old_sid] for old_sid in sorted_sids}
+
+        # 4. Opcionálisan felülírhatod az eredetit
+        groups = new_groups
+
+        print(groups)
+
+
 
 
         self.send_beep(index, ax, delay, groups)
