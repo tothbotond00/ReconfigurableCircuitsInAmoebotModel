@@ -187,7 +187,7 @@ class AmoebotStructure:
         for item in groups.get(find_key[0], []): item['primary'] = True
 
         active_sum = 0
-        for i in range(0, len(groups)):
+        for i in [*groups]:
             if(groups[i][0]['active'] == True):
                 active_sum += 1
 
