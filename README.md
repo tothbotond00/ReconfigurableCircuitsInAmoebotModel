@@ -8,3 +8,4 @@ A circuit permits the instantaneous transmission of signals between the connecte
 ```bash
 python .\stripe.py model.txt
 ```
+![image](https://github.com/user-attachments/assets/23f6db6d-5c1f-41cc-a6fb-07e25269dfbd)
