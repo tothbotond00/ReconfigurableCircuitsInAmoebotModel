@@ -1,0 +1,4 @@
+# Example Amoebot Model File
+# Each line: node_id, q, r
+0,102,127
+1,103,127
