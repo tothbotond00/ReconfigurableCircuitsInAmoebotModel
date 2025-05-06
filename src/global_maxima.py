@@ -210,24 +210,44 @@ class AmoebotStructure:
         plt.pause(delay)
         time.sleep(delay)
 
+        #count the pasc algorithm steps, for all stripes at once and every
+        step_total = 0
+        step_all_lines = 0
+        pasc_iterations = 0
+
         while active_sum != 1:
+            pasc_iterations += 1
         
             #Beep from ref_node to right
             for i in range(find_key[0] + 1, len(groups)):
                 if(i != 0):
+                    step_all_lines += 1
                     if(groups[i-1][0]['primary'] == True and groups[i][0]['active'] == True):
-                        for item in groups.get(i, []): item['primary'] = False
-                        for item in groups.get(i, []): item['secondary'] = True
+                        for item in groups.get(i, []):
+                            item['primary'] = False
+                            step_total += 1
+                        for item in groups.get(i, []):
+                            item['secondary'] = True
                     elif(groups[i-1][0]['primary'] == True and groups[i][0]['active'] == False):
-                        for item in groups.get(i, []): item['primary'] = True
-                        for item in groups.get(i, []): item['secondary'] = False
+                        for item in groups.get(i, []):
+                            item['primary'] = True
+                            step_total += 1
+                        for item in groups.get(i, []):
+                            item['secondary'] = False
                     elif(groups[i-1][0]['secondary'] == True and groups[i][0]['active'] == True):
-                        for item in groups.get(i, []): item['primary'] = True
-                        for item in groups.get(i, []): item['secondary'] = False
+                        for item in groups.get(i, []):
+                            item['primary'] = True
+                            step_total += 1
+                        for item in groups.get(i, []):
+                            item['secondary'] = False
                     elif(groups[i-1][0]['secondary'] == True and groups[i][0]['active'] == False):
-                        for item in groups.get(i, []): item['primary'] = False
-                        for item in groups.get(i, []): item['secondary'] = True
+                        for item in groups.get(i, []):
+                            item['primary'] = False
+                            step_total += 1
+                        for item in groups.get(i, []):
+                            item['secondary'] = True
 
+                    print(f"PASC iterations: {pasc_iterations}, Stripe steps: {step_all_lines}, Total steps: {step_total}")
 
                     #Blink color
                     original_color = self.patches[groups.get(i, [])[0]['node']].get_facecolor()
@@ -260,20 +280,34 @@ class AmoebotStructure:
 
             #Beep from ref_node to left
             for i in range(find_key[0] - 1, -1, -1):
+                step_all_lines += 1
                 if(groups[i+1][0]['primary'] == True and groups[i+1][0]['active'] == True):
-                    for item in groups.get(i, []): item['primary'] = False
-                    for item in groups.get(i, []): item['secondary'] = True
+                    for item in groups.get(i, []):
+                        item['primary'] = False
+                        step_total += 1
+                    for item in groups.get(i, []):
+                        item['secondary'] = True
                 elif(groups[i+1][0]['primary'] == True and groups[i+1][0]['active'] == False):
-                    for item in groups.get(i, []): item['primary'] = True
-                    for item in groups.get(i, []): item['secondary'] = False
+                    for item in groups.get(i, []):
+                        item['primary'] = True
+                        step_total += 1
+                    for item in groups.get(i, []):
+                        item['secondary'] = False
                 elif(groups[i+1][0]['secondary'] == True and groups[i+1][0]['active'] == True):
-                    for item in groups.get(i, []): item['primary'] = True
-                    for item in groups.get(i, []): item['secondary'] = False
+                    for item in groups.get(i, []):
+                        item['primary'] = True
+                        step_total += 1
+                    for item in groups.get(i, []):
+                        item['secondary'] = False
                 elif(groups[i+1][0]['secondary'] == True and groups[i+1][0]['active'] == False):
-                    for item in groups.get(i, []): item['primary'] = False
-                    for item in groups.get(i, []): item['secondary'] = True
+                    for item in groups.get(i, []):
+                        item['primary'] = False
+                        step_total += 1
+                    for item in groups.get(i, []):
+                        item['secondary'] = True
 
-                
+                print(f"PASC iterations: {pasc_iterations}, Stripe steps: {step_all_lines}, Total steps: {step_total}")
+
                 #Blink color
                 original_color = self.patches[groups.get(i, [])[0]['node']].get_facecolor()
                 if(groups[i][0]['primary'] == True):
